@@ -18,5 +18,5 @@
   "bin": {
     "mptl": "./bin/mptl"
   },
-  "repository": "git://github.com/qfoori/mptl.git"
+  "repository": "git://github.com/yupitel/mptl.git"
 }
