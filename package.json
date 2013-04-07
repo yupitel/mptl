@@ -1,0 +1,22 @@
+{
+  "name": "mptl",
+  "description": "Create Mapper templates from database",
+  "version": "0.3.1",
+  "author": "Shunsuke <qfoori@gmail.com>",
+  "keywords": ["template", "sql", "express", "rest", "wrapper", "generate", "engine", "ejs"],
+  "devDependencies": {
+    "async": "*",
+    "commander": "*",
+    "ejs": "*",
+    "properties": "*",
+    "util": "*",
+    "mkdirp": "*",
+    "mysql": "*",
+    "ncp": "*"
+  },
+  "main": "./lib/mptl.js",
+  "bin": {
+    "mptl": "./bin/mptl"
+  },
+  "repository": "git://github.com/qfoori/mptl.git"
+}

@@ -1,0 +1,99 @@
+/*
+ * Object for <%= table %>
+ *                   powered by MapperTemplate.
+ */
+
+var <%= classname %> = {
+  create: function(data) {
+    data = data || {};
+    var entity = {
+      <% for (var i = 0; i < columns.length; i++) { -%>
+      <%= columns[i].field %><%= columns[i].space %>: data.<%= columns[i].field %> || undefined,
+      <% } -%>
+      getAI: function() {
+        <%if (ai) { -%>
+        return '<%= ai.field %>';
+        <% } else { -%>
+        return undefined;
+        <% } -%>
+      }
+    };
+    return entity;
+  },
+  initialize: function(obj) {
+    if (!obj) {
+      return;
+    } 
+    <% for (var i = 0; i < columns.length; i++) {%>
+      obj.<%= columns[i].field %><%= columns[i].space %> = <%= columns[i].defEscape %><%= columns[i].def -%><%= columns[i].defEscape %>;
+    <% } %>
+  },
+  setUndefined: function(obj) {
+    if (!obj) {
+      return;
+    }
+    <% for (var i = 0; i < columns.length; i++) {%>
+      obj.<%= columns[i].field %><%= columns[i].space -%> = undefined;
+    <% } %>
+  },
+  isExist: function(field) {
+    if (!field) {
+      return;
+    }
+    var table = {
+      <% for (var i = 0; i < columns.length; i++) { -%>
+      <%= columns[i].field %><%= columns[i].space %>: true<% if (i < (columns.length - 1)) { %>,<% } %>
+      <% } -%>
+    };
+    return table[field];
+  },
+  getKeys: function() {
+    return {
+      <% for (var i = 0; i < keys.length; i++) { -%>
+      <%= keys[i].field %> : true<% if (keys.length > 1 && i < (keys.length - 1)) { %>,<% } %>
+      <% } -%>
+    };
+  },
+  getType: function(field) {
+    if (!field) {
+      return;
+    }
+    var type = {
+      <% for (var i = 0; i < columns.length; i++) { -%>
+      <%= columns[i].field %><%= columns[i].space %>: '<%= columns[i].type %>'<% if (i < (columns.length - 1)) { %>,<% } %>
+      <% } -%>
+    };
+    return type[field];
+  },
+  getDefault: function(field) {
+    if (!field) {
+      return;
+    }
+    var type = {
+      <% for (var i = 0; i < columns.length; i++) { -%>
+      <%= columns[i].field %><%= columns[i].space %>: <%= columns[i].defEscape %><%= columns[i].def %><%= columns[i].defEscape %><% if (i < (columns.length - 1)) { %>,<% } %>
+      <% } -%>
+    };
+    return type[field];
+  },
+  useEscape: function(field) {
+    if (!field) {
+      return;
+    }
+    var escape = {
+      <% var i = 0;var use = []; -%>
+      <% for (i = 0; i < columns.length; i++) { -%>
+      <% if (columns[i].escape === true) { -%>
+      <% use.push(columns[i]); -%>
+      <% } -%>
+      <% } -%>
+      <% for (i = 0; i < use.length; i++) { -%>
+      <%= use[i].field %>: true<% if (i < (use.length - 1)) { %>,<% } %>
+      <% } -%>
+    };
+    return escape[field];
+  }
+};
+
+module.exports = <%= classname -%>;
+

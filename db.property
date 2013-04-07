@@ -1,0 +1,13 @@
+# generate directory
+dir.gen=gen
+# created source directory
+dir.dao=dao
+dir.controller=ctrl
+dir.lib=lib
+# DB connection param
+db.type=mysql
+db.host=localhost
+db.port=3306
+db.database=world
+db.user=root
+db.password=root

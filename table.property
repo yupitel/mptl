@@ -1,0 +1,25 @@
+# for all
+# set create / connect method in the mapper
+sql.table.conn=false
+# use pooled connection
+sql.table.pool=true
+# enable select method
+sql.table.select=true
+# enable insert method
+sql.table.insert=true
+# enable update method
+sql.table.update=true
+# enable delete method
+sql.table.delete=true
+
+# customize sql by hand
+# If enable this, each column is directly managed in the query.
+sql.custom.select=true
+sql.custom.insert=true
+sql.custom.update=true
+sql.custom.delete=true
+
+# field
+sql.custom.tablename.field.created_at=UNIX_TIMESTAMP(now())
+sql.custom.tablename.field.updated_at=UNIX_TIMESTAMP(now())
+

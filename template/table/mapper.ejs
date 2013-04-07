@@ -1,0 +1,328 @@
+/*
+ * Mapper for <%= table %>
+ *                   powered by MapperTemplate.
+ */
+
+var Class = require('./<%= classname %>');
+var Util  = require('../lib/queryutil');
+
+
+var <%= classname -%>Mapper = {
+
+  <% if (sql.select) { -%>
+  count: function(conn, records, options, fn) {
+    records = Util.convertToArray(records);
+    var sql   = 'SELECT COUNT(*) AS num FROM <%= table %>';
+    var whsql = '';
+    var que;
+    if (options) {
+      if (options.que) {que = options.que;}
+    }
+  
+    whsql = Util.createQuery(Class, records, que);
+    if (whsql) {
+      sql += ' WHERE ' + whsql;
+    }
+  
+    var cb = function(rows, fields) {
+      var num = 0;
+      if (rows.length > 0) {
+        num = rows[0].num;
+      }
+      conn.end();
+      if (fn) {fn(num);}
+    };
+  
+    var fnQuery = function() {
+      conn.query(sql, cb);
+    };
+  
+    <% if (sql.pool == false) { -%>
+    conn.create();
+    conn.connect();
+    fnQuery();
+    <% } else { -%>
+    conn.connect(fnQuery);
+    <% } -%>
+  },
+  <% } -%>
+  <% if (sql.select) { -%>
+  select: function(conn, records, options, fn) {
+    records = Util.convertToArray(records);
+    <% if (!sql.custom.select) { -%>
+    var sql   = 'SELECT * FROM <%= table %>';
+    <% } else { -%>
+        <% var selset = ''; -%>
+        <% for (var i = 0; i < columns.length; i++) { -%>
+            <% if (i > 0 && i < columns.length) {selset += ', '} -%>
+            <% selset += columns[i].field -%>
+        <% } -%>
+    var sql   = 'SELECT <%= selset %> FROM <%= table %>';
+    <% } -%>
+    var whsql = '';
+    var que;
+    var limit;
+    var offset;
+    var args = {};
+    if (options) {
+      if (options.que) {que = options.que;}
+      if (options.limit) {limit = options.limit;}
+      if (options.offset) {offset = options.offset;}
+      if (limit) {
+        args.limit = limit;
+        args.offset = offset;
+      }
+    }
+  
+    whsql = Util.createQuery(Class, records, que);
+    if (whsql) {
+      sql += ' WHERE ' + whsql;
+    }
+  
+    var cb = function(rows, fields) {
+      var entities;
+      if (rows.length > 0) {
+        entities = new Array(rows.length);
+        for (var i = 0; i < rows.length; i++) {
+          var ent = Class.create();
+          <% for (var i = 0; i < columns.length; i++) { -%>
+          ent.<%= columns[i].field %><%= columns[i].space %> = rows[i].<%= columns[i].field %>;
+          <% } -%>
+          entities[i] = ent;
+        }
+      }
+      conn.end();
+      if (fn) {fn(entities);}
+    };
+  
+    var fnQuery = function() {
+      conn.query(sql, args, cb);
+    };
+  
+    <% if (sql.pool == false) { -%>
+    conn.create();
+    conn.connect();
+    fnQuery();
+    <% } else { -%>
+    conn.connect(fnQuery);
+    <% } -%>
+  }<% if (sql.insert || sql.update || sql.delete) { -%>,<% } %>
+  <% } -%>
+  
+  <% if (sql.insert) { -%>
+  insert: function(conn, records, options, fn) {
+    if (!records) {
+      if (fn) {return fn(new Error('records is null'));}
+    }
+    records = Util.convertToArray(records);
+    <% if (!sql.custom.insert) { -%>
+    var sql    = 'INSERT INTO <%= table %> SET ?';
+    <% } else { -%>
+    <% var insset = ''; -%>
+    <% for (var i = 0; i < columns.length; i++) { -%>
+      <% if (i > 0 && i < columns.length) {insset += ', ';} -%>
+      <% insset += columns[i].field; -%>
+    <% } -%>
+    var set   = '<%= insset %>';
+    <% var insval = ''; -%>
+    <% for (var i = 0; i < columns.length; i++) { -%>
+      <% if (i > 0 && i < columns.length) {insval += ', ';} -%>
+      <% if (sql.custom.field[columns[i].field]) { -%>
+      <% insval += sql.custom.field[columns[i].field] -%>
+      <% } else { -%>
+      <% if (columns[i].type === 'geometry') { -%>
+      <% insval += ':' + columns[i].field + '_r' -%>
+      <% } else { -%>
+      <% insval += '?' -%>
+      <% } -%>
+      <% } -%>
+    <% } -%>
+    var val   = '<%= insval %>';
+    var sql   = 'INSERT INTO <%= table %>(' + set + ') VALUES (' + val + ')';
+    <% } -%>
+    var queNum = 0;
+    var recNum = records.length;
+  
+    var cb = function(rows, fields) {
+      queNum ++;
+      if (queNum === recNum) {
+        conn.end();
+        if (fn) {fn(records);}
+      }
+    };
+    
+    var fnQuery = function() {
+      for (var i = 0; i < records.length; i++) {
+        var record = records[i];
+        // update undefined with default value
+        for (var field in record) {
+          if (typeof field === 'function') {
+            continue;
+          }
+          if (record[field] === undefined) {
+            record[field] = Class.getDefault(field);
+          }
+        }
+        var args = {record:record, type:'I'};
+        var query = sql;
+        <% if (sql.custom.insert) { -%>
+        // set escaping query values
+        var ph = [];
+        <% for (var i = 0; i < columns.length; i++) { -%>
+        <% if (!sql.custom.field[columns[i].field]) { -%>
+        <% if (columns[i].type === 'geometry') { -%>
+        if (record['<%= columns[i].field %>']) {
+          query = query.replace(/:<%= columns[i].field %>_r/g, 'GeomFromText(\'POINT(? ?)\')');
+          ph.push(record.<%= columns[i].field %>.x);
+          ph.push(record.<%= columns[i].field %>.y);
+        } else {
+          query = query.replace(/:<%= columns[i].field %>_r/g, '?');
+          ph.push(Class.getDefault('<%= columns[i].field %>'));
+        }
+        <% } else { -%>
+        ph.push(record.<%= columns[i].field %>);
+        <% } -%>
+        <% } -%>
+        <% } -%>
+        args.ph = ph;
+        <% } -%>
+        conn.query(query, args, cb);
+      }
+    };
+  
+    <% if (sql.pool == false) { -%>
+    conn.create();
+    conn.connect();
+    fnQuery();
+    <% } else { -%>
+    conn.connect(fnQuery);
+    <% } -%>
+  }<% if (sql.update || sql.delete) { -%>,<% } %>
+  <% } -%>
+  
+  <% if (sql.update) { -%>
+  update: function(conn, records, options, fn) {
+    records = Util.convertToArray(records);
+    <% if (!sql.custom.select) { -%>
+    var sql = 'UPDATE <%= table %> SET ?';
+    <% } else { -%>
+    <% var upset = ''; -%>
+    <% for (var i = 0; i < columns.length; i++) { -%>
+      <% upset += ' :' + columns[i].field + '_r' -%>
+    <% } -%>
+    var set = '<%= upset %>';
+    var sql = 'UPDATE <%= table %> SET ' + set;
+    <% } -%>
+    var queNum = 0;
+    var recNum = records.length;
+    var que;
+    if (options) {
+      if (options.que) {que = options.que;}
+    }
+  
+    var cb = function(rows, fields) {
+      queNum ++;
+      if (queNum === recNum) {
+        conn.end();
+        if (fn) {fn(records);}
+      }
+    };
+
+    var fnQuery = function() {
+      for (var i = 0; i < records.length; i++) {
+        var record = records[i];
+        var query  = sql;
+        var whsql  = '';
+        var queNum = 0;
+        var args = {record:record, type:'U'};
+        <% if (sql.custom.update) { -%>
+        var ph = [];
+        var useNum = 0;
+        var repVal = '';
+        <% for (var i = 0; i < columns.length; i++) { -%>
+        repVal = '';
+        <% if (sql.custom.field[columns[i].field]) { -%>
+        if (useNum > 0) {repVal += ', ';}
+        repVal += '<%= columns[i].field %> = <%= sql.custom.field[columns[i].field] %>';
+        useNum ++;
+        <% } else { -%>
+        if (record.<%= columns[i].field %> !== undefined) {
+          if (useNum > 0) {repVal += ', ';}
+          <% if (columns[i].type === 'geometry') { -%>
+          repVal += '<%= columns[i].field %> = GeomFromText(\\\'POINT(? ?)\\\')';
+          ph.push(record.<%= columns[i].field %>.x);
+          ph.push(record.<%= columns[i].field %>.y);
+          <% } else { -%>
+          repVal += '<%= columns[i].field %> = ?';
+          ph.push(record.<%= columns[i].field %>);
+          <% } -%>
+          useNum ++;
+        }
+        <% } -%>
+        query = query.replace(/:<%= columns[i].field %>_r/g, repVal);
+        <% } -%>
+        args.ph = ph;
+        <% } -%>
+
+        whsql = Util.createQuery(Class, record, que);
+        if (whsql) {
+          query += ' WHERE ' + whsql;
+        }
+    
+        conn.query(query, args, cb);
+      }
+    };
+  
+    <% if (sql.pool == false) { -%>
+    conn.create();
+    conn.connect();
+    fnQuery();
+    <% } else { -%>
+    conn.connect(fnQuery);
+    <% } -%>
+  }<% if (sql.delete) { -%>,<% } %>
+  <% } -%>
+  
+  <% if (sql.delete) { -%>
+  delete: function(conn, records, options, fn) {
+    records = Util.convertToArray(records);
+    var sql = 'DELETE FROM <%= table %>';
+    var whsql = '';
+    var que;
+    if (options) {
+      if (options.que) {que = options.que;}
+    }
+    
+    whsql = Util.createQuery(Class, records, que);
+    // prohibit to delete all column.
+    // if delete all column, set '1' to que variable.
+    if (!whsql || whsql.length === 0) {
+      return;
+    }
+  
+    if (whsql) {
+      sql += ' WHERE ' + whsql;
+    }
+    
+    var cb = function(rows, fields) {
+      conn.end();
+      if (fn) {fn(rows);}
+    };
+  
+    var fnQuery = function() {
+      conn.query(sql, cb);
+    };
+
+    <% if (sql.pool == false) { -%>
+    conn.create();
+    conn.connect();
+    fnQuery();
+    <% } else { -%>
+    conn.connect(fnQuery);
+    <% } -%>
+  }
+  <% } -%>
+};
+
+module.exports = <%= classname -%>Mapper;
+
