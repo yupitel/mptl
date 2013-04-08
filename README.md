@@ -30,14 +30,13 @@ Other database like postgreSQL, SQLite and oracle etc will be supported in the n
 
 ## Setting
 ###Create database property file. (mandatory)
-    db.property
-    \# generate directory
+    # generate directory
     dir.gen=gen
-    \# created source directory
+    # created source directory
     dir.dao=dao
     dir.controller=ctrl
     dir.lib=lib
-    \# DB connection param
+    # DB connection param
     db.type=mysql
     db.host=localhost
     db.port=3306

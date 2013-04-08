@@ -1,7 +1,7 @@
 {
   "name": "mptl",
   "description": "Create Mapper templates from database",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "author": "Shunsuke <qfoori@gmail.com>",
   "keywords": [
     "template",
