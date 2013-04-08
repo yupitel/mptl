@@ -17,7 +17,7 @@ Other database like postgreSQL, SQLite and oracle etc will be supported in the n
 - MySQL
 
 ## Installation
-    $ npm install mptl
+    $ npm install -g mptl
 
 
 ## Howto
