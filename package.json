@@ -3,8 +3,17 @@
   "description": "Create Mapper templates from database",
   "version": "0.3.2",
   "author": "Shunsuke <qfoori@gmail.com>",
-  "keywords": ["template", "sql", "express", "rest", "wrapper", "generate", "engine", "ejs"],
-  "devDependencies": {
+  "keywords": [
+    "template",
+    "sql",
+    "express",
+    "rest",
+    "wrapper",
+    "generate",
+    "engine",
+    "ejs"
+  ],
+  "dependencies": {
     "async": "*",
     "commander": "*",
     "ejs": "*",
@@ -18,5 +27,14 @@
   "bin": {
     "mptl": "./bin/mptl"
   },
-  "repository": "git://github.com/yupitel/mptl.git"
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/yupitel/mptl.git"
+  },
+  "readmeFilename": "Readme.md",
+  "gitHead": "0b9f375c93242dc69fc1e7b88bcb96a4d0384cd3",
+  "directories": {
+    "example": "example"
+  },
+  "license": "MIT"
 }
