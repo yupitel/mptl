@@ -20,6 +20,8 @@ sql.custom.update=true
 sql.custom.delete=true
 
 # field
-sql.custom.tablename.field.created_at=UNIX_TIMESTAMP(now())
-sql.custom.tablename.field.updated_at=UNIX_TIMESTAMP(now())
+
+sql.custom.field.created_at=UNIX_TIMESTAMP(now())
+sql.custom.field.updated_at=UNIX_TIMESTAMP(now())
+
 

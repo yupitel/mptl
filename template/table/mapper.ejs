@@ -66,6 +66,7 @@ var <%= classname -%>Mapper = {
     var args = {};
     if (options) {
       if (options.que) {que = options.que;}
+      if (options.orders) {args.orders = options.orders;}
       if (options.limit) {limit = options.limit;}
       if (options.offset) {offset = options.offset;}
       if (limit) {

@@ -1,7 +1,7 @@
 {
   "name": "mptl",
   "description": "Create Mapper templates from database",
-  "version": "0.3.3",
+  "version": "0.3.5",
   "author": "Shunsuke <qfoori@gmail.com>",
   "keywords": [
     "template",
@@ -18,10 +18,8 @@
     "commander": "*",
     "ejs": "*",
     "properties": "*",
-    "util": "*",
-    "mkdirp": "*",
-    "mysql": "*",
-    "ncp": "*"
+    "esfs": "*",
+    "mysql": "*"
   },
   "main": "./lib/mptl.js",
   "bin": {
