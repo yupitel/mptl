@@ -8,7 +8,7 @@ var <%= classname %> = {
     data = data || {};
     var entity = {
       <% for (var i = 0; i < columns.length; i++) { -%>
-      <%= columns[i].field %><%= columns[i].space %>: data.<%= columns[i].field %> || undefined,
+      <%= columns[i].field %><%= columns[i].space %>: undefined,
       <% } -%>
       getAI: function() {
         <%if (ai) { -%>
@@ -18,6 +18,18 @@ var <%= classname %> = {
         <% } -%>
       }
     };
+
+    if (data) {
+      for (field in entity) {
+        if (typeof data[field] === 'function') {
+          continue;
+        }
+        if (typeof data[field] !== 'undefined') {
+          entity[field] = data[field];
+        }
+      }
+    }
+
     return entity;
   },
   initialize: function(obj) {

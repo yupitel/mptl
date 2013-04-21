@@ -19,7 +19,7 @@ var <%= classname -%>Mapper = {
       if (options.que) {que = options.que;}
     }
   
-    whsql = Util.createQuery(Class, records, que);
+    whsql = Util.createQuery(Class, records, que, true);
     if (whsql) {
       sql += ' WHERE ' + whsql;
     }
@@ -75,7 +75,7 @@ var <%= classname -%>Mapper = {
       }
     }
   
-    whsql = Util.createQuery(Class, records, que);
+    whsql = Util.createQuery(Class, records, que, true);
     if (whsql) {
       sql += ' WHERE ' + whsql;
     }

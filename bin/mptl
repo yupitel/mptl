@@ -119,7 +119,7 @@ function loadConfig(file, filetable, conf, tplpath, fn) {
       }
     }
     if (tplpath) {
-      rprops.tplDir = __dirname + '/../' + tplpath;
+      rprops.tplDir = tplpath;
     }
 
     if (filetable) {
