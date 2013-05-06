@@ -22,7 +22,7 @@ Other database like postgreSQL, SQLite and oracle etc will be supported in the n
 
 ## Howto
 ###Command
-    $ mptl.js -c db.property -t table.property -u ./template
+    $ mptl -c db.property -t table.property -u ./template
  
     -c : path of databaase property file (mandatory)
     -t : path of table property file     (not mandatory)
