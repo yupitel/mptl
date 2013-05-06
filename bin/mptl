@@ -72,29 +72,6 @@ function mkdir(path) {
   }
 }
 
-/**
-  * make dir for generating template
-  *
-  */
-function makeDir(conf, tableconf, fn) { 
-  var gen      = conf.dir.gen;
-  var genDao   = gen + '/' + conf.dir.dao;
-  var genCtrl  = gen + '/' + conf.dir.controller;
-  var genLib   = gen + '/' + conf.dir.lib;
-  var mode     = '0755';
-  
-  fs.rmdirSync(gen);
-  console.log('\033[32mcreate directory\033[0m');
-  mkdir(gen);
-  mkdir(genDao);
-  mkdir(genCtrl);
-  mkdir(genLib);
-
-  if (fn) {
-    fn(conf, tableconf);
-  }
-
-}
 
 /**
  * Read config
@@ -105,18 +82,6 @@ function loadConfig(file, filetable, conf, tplpath, fn) {
     var rprops = readNamespace(props);
     if (!rprops.dir) {
       rprops.dir = {};
-      if (!rprops.dir.gen) {
-        rprops.dir.gen = 'gen';
-      }
-      if (!rprops.dir.dao) {
-        rprops.dir.dao = 'dao';
-      }
-      if (!rprops.dir.controller) {
-        rprops.dir.controller = 'ctrl';
-      }
-      if (!rprops.dir.lib) {
-        rprops.dir.lib = 'lib';
-      }
     }
     if (tplpath) {
       rprops.tplDir = tplpath;
@@ -128,17 +93,11 @@ function loadConfig(file, filetable, conf, tplpath, fn) {
         if (fn) {
           fn(rprops, rtableprops);
         }
-
-  //      makeDir(rprops, rtableprops, fn);
-
       });
     } else {
       if (fn) {
         fn(rprops, null);
       }
-      
-//       makeDir(rprops, null, fn);
-
     }
   });
 }

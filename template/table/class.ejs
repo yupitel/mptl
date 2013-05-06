@@ -1,6 +1,5 @@
 /*
  * Object for <%= table %>
- *                   powered by MapperTemplate.
  */
 
 var <%= classname %> = {
@@ -25,6 +24,11 @@ var <%= classname %> = {
           continue;
         }
         if (typeof data[field] !== 'undefined') {
+          if (!<%= classname %>.useEscape(field)) {
+            if (isNaN(data[field]) === true) {
+              continue;
+            }
+          }
           entity[field] = data[field];
         }
       }
