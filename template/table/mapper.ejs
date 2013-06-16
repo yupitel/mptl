@@ -3,7 +3,6 @@
  *                   powered by MapperTemplate.
  */
 
-
 var Class = require('./<%= classname %>');
 var Util  = require('../lib/queryutil');
 
@@ -16,11 +15,9 @@ var <%= classname -%>Mapper = {
     var sql   = 'SELECT COUNT(*) AS num FROM <%= table %>';
     var whsql = '';
     var que;
-    var key;
     var isConnect = false;
     if (options) {
       if (options.que) {que = options.que;}
-      if (options.key) {key = options.key;}
       if (options.isConnect === true) {isConnect = true;}
     }
   
@@ -29,35 +26,30 @@ var <%= classname -%>Mapper = {
       sql += ' WHERE ' + whsql;
     }
   
-    var cb = function(err, rows, fields) {
+    var cb = function(err, rows, fields, args) {
       var num = 0;
-      if (rows.length > 0) {
+      if (rows && rows.length > 0) {
         num = rows[0].num;
       }
       if (isConnect === false) {
-        conn.end(key);
+        conn.end();
       }
       if (fn) {fn(err, num);}
     };
   
-    var fnQuery = function(pool) {
-      if (pool) {
-        key = pool;
-      }
-      conn.query(sql, {key: key}, cb);
+    var fnQuery = function(conn) {
+      conn.query(sql, cb);
     };
  
     if (isConnect === false) {
       <% if (sql.pool == false) { -%>
       conn.create();
-      conn.connect();
-      fnQuery(key);
-      <% } else { -%>
-      conn.connect(fnQuery);
       <% } -%>
+      conn.getconnection(fnQuery);
     } else {
-      fnQuery(key);
+      fnQuery(conn);
     }
+
   },
   <% } -%>
   <% if (sql.select) { -%>
@@ -75,14 +67,12 @@ var <%= classname -%>Mapper = {
     <% } -%>
     var whsql = '';
     var que;
-    var key;
     var limit;
     var offset;
     var isConnect = false;
     var args = {};
     if (options) {
       if (options.que) {que = options.que;}
-      if (options.key) {key = options.key;}
       if (options.orders) {args.orders = options.orders;}
       if (options.limit) {limit = options.limit;}
       if (options.offset) {offset = options.offset;}
@@ -98,41 +88,52 @@ var <%= classname -%>Mapper = {
       sql += ' WHERE ' + whsql;
     }
   
-    var cb = function(err, rows, fields) {
-      var entities;
-      if (rows.length > 0) {
-        entities = new Array(rows.length);
-        for (var i = 0; i < rows.length; i++) {
-          var ent = Class.create();
-          <% for (var i = 0; i < columns.length; i++) { -%>
-          ent.<%= columns[i].field %><%= columns[i].space %> = rows[i].<%= columns[i].field %>;
-          <% } -%>
-          entities[i] = ent;
+    var fnQuery = function(conn) {
+      var isErr = false;
+      var cb = function(err, rows, fields, args) {
+        if (isErr === true) {
+          return;
         }
-      }
-      if (isConnect === false) {
-        conn.end(key);
-      }
-      if (fn) {fn(err, entities);}
-    };
-  
-    var fnQuery = function(pool) {
-      if (pool) {
-        key = pool;
-      }
-      conn.query(sql, {key: key}, cb);
+        if (err) {
+          isErr = true;
+        }
+        var _fnEnd = function() {
+          if (isConnect === false) {
+            conn.end();
+          }
+        };
+        var entities;
+        if (!err && rows && rows.length > 0) {
+          entities = new Array(rows.length);
+          for (var i = 0; i < rows.length; i++) {
+            var ent = Class.create();
+            <% for (var i = 0; i < columns.length; i++) { -%>
+            ent.<%= columns[i].field %><%= columns[i].space %> = rows[i].<%= columns[i].field %>;
+            <% } -%>
+            entities[i] = ent;
+          }
+        }
+        <% if (sql.transaction) { -%>
+        conn.commit(_fnEnd);
+        <% } else { -%>
+        _fnEnd();
+        <% } -%>          
+        if (fn) {fn(err, entities);}
+      };
+
+      <% if (sql.transaction) { -%>
+      conn.beginTransaction(cb);
+      <% } -%>
+      conn.query(sql, cb);
     };
  
     if (isConnect === false) {
       <% if (sql.pool == false) { -%>
       conn.create();
-      conn.connect();
-      fnQuery(key);
-      <% } else { -%>
-      conn.connect(fnQuery);
       <% } -%>
+      conn.getconnection(fnQuery);
     } else {
-      fnQuery(key);
+      fnQuery(conn);
     }
 
   }<% if (sql.insert || sql.update || sql.delete) { -%>,<% } %>
@@ -143,10 +144,8 @@ var <%= classname -%>Mapper = {
     if (!records || records.length === 0) {
       if (fn) {return fn(new Error('records is null'));}
     }
-    var key;
     var isConnect = false;
     if (options) {
-      if (options.key) {key = options.key;}
       if (options.isConnect === true) {isConnect = true;}
     }
     records = Util.convertToArray(records);
@@ -178,92 +177,101 @@ var <%= classname -%>Mapper = {
     var queNum = 0;
     var recNum = records.length;
     
-    var fnQuery = function(pool) {
-      if (pool) {
-        key = pool;
-      }
-      var cb = function(err, rows, fields) {
-        queNum ++;
-        if (queNum === recNum) {
-          <% if (sql.transaction) { -%>
-          conn.commit(key);
-          <% } -%>
+    var fnQuery = function(conn) {
+      var isErr = false;
+      var cb = function(err, rows, fields, args) {
+        var _fnEnd = function() {
           if (isConnect === false) {
-            conn.end(key);
+            conn.end();
           }
+        };
+        if (err) {
+          if (isErr === false) {
+            <% if (sql.transaction) { -%>
+            conn.rollback(_fnEnd);
+            <% } else { -%>
+            _fnEnd();
+            <% } -%>
+            isErr = true;
+            if (fn) {fn(err, records);}
+          }
+          return;
+        }
+        if (args && args.index !== null && args.index !== undefined) {
+          var record = records[args.index];
+          var aikey = record.getAI();
+          if (aikey) {
+            record[aikey] = rows.insertId;
+          }
+        }
+        queNum ++;
+        if (queNum === recNum && isErr === false) {
+          <% if (sql.transaction) { -%>
+          conn.commit(_fnEnd);
+          <% } else { -%>
+          _fnEnd();
+          <% } -%>          
           if (fn) {fn(err, records);}
         }
       };
 
-      try {
-        <% if (sql.transaction) { -%>
-        conn.beginTransaction(key);
-        <% } -%>
-  
-        for (var i = 0; i < records.length; i++) {
-          var record = records[i];
-          // update undefined with default value
-          for (var field in record) {
-            if (typeof field === 'function') {
-              continue;
-            }
-            if (record[field] === undefined) {
-              record[field] = Class.getDefault(field);
-            }
+      <% if (sql.transaction) { -%>
+      conn.beginTransaction(cb);
+      <% } -%>
+
+      for (var i = 0; i < records.length; i++) {
+        var record = records[i];
+        // update undefined with default value
+        for (var field in record) {
+          if (typeof field === 'function') {
+            continue;
           }
-          var args = {record:record, type:'I', key:key};
-          var query = sql;
-          <% if (sql.custom.insert) { -%>
-          // set escaping query values
-          var ph = [];
-          <% for (var i = 0; i < columns.length; i++) { -%>
-          <% if (!sql.custom.field[columns[i].field]) { -%>
-          <% if (columns[i].type === 'geometry') { -%>
-          if (record['<%= columns[i].field %>']) {
-            query = query.replace(/:<%= columns[i].field %>_r/g, 'GeomFromText(\'POINT(? ?)\')');
-            ph.push(record.<%= columns[i].field %>.x);
-            ph.push(record.<%= columns[i].field %>.y);
-          } else {
-            query = query.replace(/:<%= columns[i].field %>_r/g, '?');
-            ph.push(Class.getDefault('<%= columns[i].field %>'));
+          if (record[field] === undefined) {
+            record[field] = Class.getDefault(field);
           }
-          <% } else { -%>
-          ph.push(record.<%= columns[i].field %>);
-          <% } -%>
-          <% } -%>
-          <% } -%>
-          args.ph = ph;
-          <% } -%>
-          conn.query(query, args, cb);
         }
-      } catch(e) {
-        <% if (sql.transaction) { -%>
-        conn.rollback(key);
+        var args = {record:record, cbargs:{index: i}};
+        var query = sql;
+        <% if (sql.custom.insert) { -%>
+        // set escaping query values
+        var ph = [];
+        <% for (var i = 0; i < columns.length; i++) { -%>
+        <% if (!sql.custom.field[columns[i].field]) { -%>
+        <% if (columns[i].type === 'geometry') { -%>
+        if (record['<%= columns[i].field %>']) {
+          query = query.replace(/:<%= columns[i].field %>_r/g, 'GeomFromText(\'POINT(? ?)\')');
+          ph.push(record.<%= columns[i].field %>.x);
+          ph.push(record.<%= columns[i].field %>.y);
+        } else {
+          query = query.replace(/:<%= columns[i].field %>_r/g, '?');
+          ph.push(Class.getDefault('<%= columns[i].field %>'));
+        }
+        <% } else { -%>
+        ph.push(record.<%= columns[i].field %>);
         <% } -%>
-        throw e;
+        <% } -%>
+        <% } -%>
+        args.ph = ph;
+        <% } -%>
+        conn.query(query, args, cb);
       }
     };
 
     if (isConnect === false) {
       <% if (sql.pool == false) { -%>
       conn.create();
-      conn.connect();
-      fnQuery(key);
-      <% } else { -%>
-      conn.connect(fnQuery);
       <% } -%>
+      conn.getconnection(fnQuery);
     } else {
-      fnQuery(key);
+      fnQuery(conn);
     }
   }<% if (sql.update || sql.delete) { -%>,<% } %>
   <% } -%>
   
   <% if (sql.update) { -%>
   update: function(conn, records, options, fn) {
-    var key;
     var isConnect = false;
     if (options) {
-      if (options.key) {key = options.key;}
       if (options.isConnect === true) {isConnect = true;}
     }
     records = Util.convertToArray(records);
@@ -284,16 +292,33 @@ var <%= classname -%>Mapper = {
       if (options.que) {que = options.que;}
     }
   
-    var fnQuery = function(pool) {
-      if (pool) {
-        key = pool;
-      }
-      var cb = function(err, rows, fields) {
-        queNum ++;
-        if (queNum === recNum) {
+    var fnQuery = function(conn) {
+      var isErr = false;
+      var cb = function(err, rows, fields, args) {
+        var _fnEnd = function() {
           if (isConnect === false) {
-            conn.end(key);
+            conn.end();
           }
+        };
+        if (err) {
+          if (isErr === false) {
+            <% if (sql.transaction) { -%>
+            conn.rollback(_fnEnd);
+            <% } else { -%>
+            _fnEnd();
+            <% } -%>
+            isErr = true;
+            if (fn) {fn(err, records);}
+          }
+          return;
+        }
+        queNum ++;
+        if (queNum === recNum && isErr === false) {
+          <% if (sql.transaction) { -%>
+          conn.commit(_fnEnd);
+          <% } else { -%>
+          _fnEnd();
+          <% } -%>          
           if (fn) {fn(err, records);}
         }
       };
@@ -303,7 +328,7 @@ var <%= classname -%>Mapper = {
         var query  = sql;
         var whsql  = '';
         var queNum = 0;
-        var args = {record:record, type:'U', key:key};
+        var args = {record:record, cbargs:{index: i}};
         <% if (sql.custom.update) { -%>
         var ph = [];
         var useNum = 0;
@@ -345,13 +370,10 @@ var <%= classname -%>Mapper = {
     if (isConnect === false) {
       <% if (sql.pool == false) { -%>
       conn.create();
-      conn.connect();
-      fnQuery(key);
-      <% } else { -%>
-      conn.connect(fnQuery);
       <% } -%>
+      conn.getconnection(fnQuery);
     } else {
-      fnQuery(key);
+      fnQuery(conn);
     }
   }<% if (sql.delete) { -%>,<% } %>
   <% } -%>
@@ -362,11 +384,9 @@ var <%= classname -%>Mapper = {
     var sql = 'DELETE FROM <%= table %>';
     var whsql = '';
     var que;
-    var key;
     var isConnect = false;
     if (options) {
       if (options.que) {que = options.que;}
-      if (options.key) {key = options.key;}
       if (options.isConnect === true) {isConnect = true;}
     }
     
@@ -381,29 +401,46 @@ var <%= classname -%>Mapper = {
       sql += ' WHERE ' + whsql;
     }
   
-    var fnQuery = function(pool) {
-      if (pool) {
-        key = pool;
-      }
+    var fnQuery = function(conn) {
+      var isErr = false;
       var cb = function(err, rows, fields) {
-        if (isConnect === false) {
-          conn.end(key);
+        if (isErr === true) {
+          return;
         }
+        if (err) {
+          isErr = true;
+        }
+        var _fnEnd = function() {
+          if (isConnect === false) {
+            conn.end();
+          }
+        };
+        <% if (sql.transaction) { -%>
+        if (err) {
+          conn.rollback(_fnEnd);
+        } else {
+          conn.commit(_fnEnd);
+        }
+        <% } else { -%>
+        _fnEnd();
+        <% } -%>          
         if (fn) {fn(err, rows);}
       };
-      conn.query(sql, {key: key}, cb);
+
+      <% if (sql.transaction) { -%>
+      conn.beginTransaction(cb);
+      <% } -%>
+
+      conn.query(sql, cb);
     };
 
     if (isConnect === false) {
       <% if (sql.pool == false) { -%>
       conn.create();
-      conn.connect();
-      fnQuery(key);
-      <% } else { -%>
-      conn.connect(fnQuery);
       <% } -%>
+      conn.getconnection(fnQuery);
     } else {
-      fnQuery(key);
+      fnQuery(conn);
     }
   }
   <% } -%>
