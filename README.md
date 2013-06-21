@@ -45,8 +45,6 @@ Other database like postgreSQL, SQLite and oracle etc will be supported in the n
     db.password=root
 ###Create table property file.(not mandatory)
     # for all
-    # set create / connect method in the mapper
-    sql.table.conn=false
     # use pooled connection
     sql.table.pool=true
     # enable select method

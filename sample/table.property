@@ -1,6 +1,4 @@
 # for all
-# set create / connect method in the mapper
-sql.table.conn=false
 # use pooled connection
 sql.table.pool=true
 # enable select method

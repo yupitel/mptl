@@ -21,9 +21,8 @@ app.configure(function(){
   config.password = '<%= db.password %>';
   config.database = '<%= db.database %>';
   
-  
+  var dbconn = factory.create(config, type); 
   <% if (sql.pool == true) { -%>
-  var dbconn = factory.create(config, type);
   dbconn.createpool();
   <% } -%>
 
@@ -36,10 +35,6 @@ app.configure(function(){
   app.use(express.cookieParser());
   app.use(express.methodOverride());
   app.use(function(req, res, next){
-    // share db connection
-    <% if (sql.pool == false) { -%>
-    var dbconn = factory.create(config, type);
-    <% } -%>
     req.dbconn = dbconn;
     next();
   });
