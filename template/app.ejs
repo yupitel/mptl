@@ -18,7 +18,9 @@ app.configure(function(){
   config.host     = '<%= db.host %>';
   config.port     = '<%= db.port %>';
   config.user     = '<%= db.user %>';
+  <% if (db.password) { -%>
   config.password = '<%= db.password %>';
+  <% } -%>
   config.database = '<%= db.database %>';
   
   var dbconn = factory.create(config, type); 
