@@ -1,0 +1,141 @@
+var Config = require('../lib/testconfig');
+
+var optionsOld = {
+  hostname: Config.hostnameOld,
+  port: 80,
+  method: 'GET'
+};
+
+var optionsNew = {
+  hostname: Config.hostnameNew,
+  port: 80,
+  method: 'GET'
+};
+
+var tests = [];
+var pair  = {};
+var old;
+var new;
+<% for (var i = 0; i < tables.length; i++) { -%>
+  pair = {};
+  old = Config.oldheader + <%= tables[i].name %>;
+  new = Config.newheader + <%= tables[i].name %>;
+  pair.old = old;
+  pair.new = new;
+  tests.push(pair);
+<% } -%>
+
+var cloneObject = function(input) {
+  var output = {};
+  for (var field in input) {
+    if (input[field] instanceof Array){
+      output[field] = [];
+      for (var i = 0; i < input[field].length; i++) {
+        output[field].push(cloneObject(input[field][i]));
+      }
+    } else {
+      if (input[field] instanceof Object) {
+        output[field] = cloneObject(input[field]);
+      } else {
+        output[field] = input[field];
+      }
+    }
+  }
+  return output;
+};
+
+var compareObject = function(key, use, cmp) {
+  if (!use || !cmp) {
+    return;
+  }
+  var key = '' || key;
+
+  if (!(use instanceof Object)) {
+    if (use !== cmp) {
+      console.log('diff: ' + key + ' ' + use + ' ' + cmp);
+    }
+    return;
+  }
+  if (!(cmp instanceof Object)) {
+    console.log('diff: ' + key + 'data type is not same.');
+    return;
+  }
+
+  for (var field in use) {
+    var useobj = use[field];
+    var cmpobj = cmp[field];
+    if (useobj instanceof Array){
+      if (cmpobj instanceof Array) {
+        if (useobj.length !== cmpobj.length) {
+          console.log('diff: ' + key + 'obj length is not same.');
+        } else {
+          // check each data
+          for (var i = 0; i < useobj.length; i++) {
+            compareObject((key + '.' + field), useobj[i], cmpobj[i]);
+          }
+        }
+      } else {
+        console.log('diff: ' + key + 'compare data is not array');
+      }
+    } else {
+      compareObject((key + '.' + field), useobj, cmpobj);
+    }
+  }
+};
+
+var checkdiff = function(opOld, opNew) {
+  if (!opOld || !opNew) {
+    return;
+  }
+  var oldobj;
+  var newobj;
+  var cbDiff = function(type, obj) {
+    if (type === 1) {        // old api
+      oldobj = obj;
+    } else if (type === 2) { // new api
+      newobj = obj;
+    }
+      
+    if (oldobj && newobj) {
+      compareObject(null, oldobj, newobj);
+    }
+  };
+    
+  // request
+  var request = function(type, option) {
+    var req = http.request(option, function(res) {
+      var output = '';
+      console.log(options.host + ':' + res.statusCode);
+      
+      res.setEncoding('utf8');
+      res.on('data', function (chunk) {
+        output += chunk;
+      });
+      res.on('end', function() {
+        var obj = JSON.parse(output);
+        cbDiff(res.statusCode, type, obj);
+      });
+    });
+    req.on('error', function(err) {
+      //res.send('error: ' + err.message);
+    });
+    req.end();
+  };
+
+  request(1, opOld);
+  request(2, opNew);  
+};
+
+for (var i = 0; i < tests.length; i++) {
+  var test = test[i];
+  var opOld = cloneObject(optionsOld);
+  var opNew = cloneObject(optionsNew);
+
+  opOld.path = test.old;
+  opNew.path = test.new;
+
+  checkDiff(opOld, opNew);
+}
+
+
+
