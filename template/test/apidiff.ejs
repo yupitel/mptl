@@ -1,4 +1,5 @@
-var Config = require('../lib/testconfig');
+var Config = require('../lib/testconfig'),
+    http   = require('http');
 
 var optionsOld = {
   hostname: Config.hostnameOld,
@@ -14,14 +15,14 @@ var optionsNew = {
 
 var tests = [];
 var pair  = {};
-var old;
-var new;
+var oldpath;
+var newpath;
 <% for (var i = 0; i < tables.length; i++) { -%>
   pair = {};
-  old = Config.oldheader + <%= tables[i].name %>;
-  new = Config.newheader + <%= tables[i].name %>;
-  pair.old = old;
-  pair.new = new;
+  oldpath = Config.oldheader + <%= tables[i].name %>;
+  newpath = Config.newheader + <%= tables[i].name %>;
+  pair.oldpath = oldpath;
+  pair.newpath = newpath;
   tests.push(pair);
 <% } -%>
 
@@ -131,8 +132,8 @@ for (var i = 0; i < tests.length; i++) {
   var opOld = cloneObject(optionsOld);
   var opNew = cloneObject(optionsNew);
 
-  opOld.path = test.old;
-  opNew.path = test.new;
+  opOld.path = test.oldpath;
+  opNew.path = test.newpath;
 
   checkDiff(opOld, opNew);
 }

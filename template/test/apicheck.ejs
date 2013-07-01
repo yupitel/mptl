@@ -1,0 +1,218 @@
+var Config = require('./testconfig'),
+    async  = require('async'),
+    http   = require('http');
+
+var options = {
+  hostname: Config.hostname,
+  port: Config.port
+};
+
+var tests = {};
+var test;
+<% for (var i = 0; i < tables.length; i++) { -%>
+  tests.<%= tables[i].name %> = {};
+  test = tests.<%= tables[i].name %>;
+  test.entity = require('../dao/<%= tables[i].name %>');
+  test.path   = Config.header + '<%= tables[i].name %>';
+  test.ex     = [];  // table: id array
+  test.istest = false;
+  test.ids    = [];
+
+<% } -%>
+
+var cloneObject = function(input) {
+  var output = {};
+  for (var field in input) {
+    if (input[field] instanceof Array) {
+      output[field] = [];
+      for (var i = 0; i < input[field].length; i++) {
+        output[field].push(cloneObject(input[field][i]));
+      }
+    } else {
+      if (input[field] instanceof Object) {
+        output[field] = cloneObject(input[field]);
+      } else {
+        output[field] = input[field];
+      }
+    }
+  }
+  return output;
+};
+
+
+var executeTest = function(option, table) {
+  // test : get && post -> get && put -> get && delete -> get
+  // check each api and changed data is recovered to default 
+  var entity = table.entity;
+  var ai = entity.getAI();
+  var fnRequest = function(option, object, cb) {
+
+    var _toJson = function(object) {
+      var json;
+      if (object) {
+        json = JSON.stringify(object);
+      } else {
+        json = '';
+      }
+      return json;
+    };
+
+    var _setHeader = function(json, headers) {
+      var headers = header || {};
+      if (json && json.length > 0) {
+        headers['Content-Type']   = 'application/json';
+        headers['Content-Length'] = Buffer.byteLength(json);
+      } else {
+        headers['Content-Type']   = 'application/html';
+      }
+      return headers;
+    };
+
+    var json = this._getJson(object);
+    option.headers = this._setHeader(json, option.headers);
+
+    var req = http.request(option, function(res) {
+      var output = '';
+      console.log(options.host + ':' + res.statusCode);
+      
+      res.setEncoding('utf8');
+      res.on('data', function (chunk) {
+        output += chunk;
+      });
+      res.on('end', function() {
+        var obj = JSON.parse(output);
+        cb(null, obj);
+      });
+    });
+    req.on('error', function(err) {
+      cb(err, null);
+    });
+    if (json) {
+      req.write(json);
+    }
+    req.end();
+  };
+    
+  var fnTestGet = function(fn) {
+    option.method = 'GET';
+    var _cb = function(err, result) {
+      var data = result.data;
+      if (data) {
+        if (ai) {
+          for (var i = 0; i < data.length; i++) {
+            data[i][ai] = null;
+          }
+        }
+      }
+      if (fn) {fn(err, data);}
+    };
+    var object = {limit: 10};
+    fnRequest(option, object, _cb);
+  };
+    
+  var fnTestPost = function(record, fn) {
+    var setdata;
+    option.method = 'POST';
+    var _cbnext = function(err, result) {
+      var data = result.data;
+      if (fn) {fn(err, setdata);}
+    };
+
+    var _cb = function(err, result) {
+      var data = result.data;
+      setdata = data;
+      var object  = {record: record};
+      fnRequest(option, object, _cbnext);
+    };
+    var object = {record: record};
+    fnRequest(option, object, _cb);
+  };
+
+  var fnTestPut = function(record, fn) {
+    var setdata;
+    option.method = 'PUT';
+    var _cbnext = function(err, result) {
+      var data = result.data;
+      if (fn) {fn(err, setdata);}
+    };
+
+    var _cb = function(err, result) {
+      var data = result.data;
+      setdata = data;
+      var object  = {record: record};
+      fnRequest(option, object, _cbnext);
+    };
+    var object = {record: record};
+    fnRequest(option, object, _cb);
+  }; 
+
+  var fnTestDelete = function(record, fn) {
+    option.method = 'DELETE';
+    var setdata;
+    var _cbnext = function(err, result) {
+      var data = result.data;
+      if (fn) {fn(err, setdata);}
+    };
+
+    var _cb = function(err, result) {
+      var data = result.data;
+      setdata = data;
+      var object  = {record: record};
+      fnRequest(option, object, _cbnext);
+    };
+    var object = {record: record};
+    fnRequest(option, object, _cb);
+  };
+
+  async.waterfall(
+    [fnTestGet, fnTestPost, fnTestPut, fnTestDelete],
+    function(err, result) {
+      if (err) {
+        console.log(err);
+        throw err;
+      }
+      console.log('   \033[36mmapping\033[0m : complete');
+    }
+  );
+
+
+};
+
+
+var testcnt = 0;
+var testnum = 0;
+for (var key in tests) {
+  testnum ++;
+}
+
+var isContinue = true
+  while(isContinue === true) {
+  for (var key in tests) {
+    var i;
+    var table = tests[key];
+    var isExKey = true;
+    if (table.ex && table.ex.length > 0) {
+      for (i = 0; i < table.ex.length; i++) {
+        var exkey = table.ex[i];
+        if (!exkey.ids) {
+          if (tests[exkey.table].ids.length > 0) {
+            exkey.ids = tests[exkey.table].ids;
+          } else {
+            isExKey = false;
+          }
+        }
+      }
+    }
+    if (isExKey === true && table.istest === false) {
+      var op = cloneObject(options);
+      op.path = table.path;
+      executeTest(op, table);
+      table.istest = true;
+      testcnt ++;
+      if (testnum === testcnt) {
+        isContinue = false;
+      }
+    }
+  }
+}
+
