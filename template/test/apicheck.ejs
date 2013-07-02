@@ -1,4 +1,4 @@
-var Config = require('./testconfig'),
+var Config = require('./config'),
     async  = require('async'),
     http   = require('http');
 
@@ -44,7 +44,10 @@ var executeTest = function(option, table) {
   // test : get && post -> get && put -> get && delete -> get
   // check each api and changed data is recovered to default 
   var entity = table.entity;
-  var ai = entity.getAI();
+  var ai;
+  if ('function' === typeof entity.getAI) {
+    ai = entity.getAI();
+  }
   var fnRequest = function(option, object, cb) {
 
     var _toJson = function(object) {
@@ -58,7 +61,7 @@ var executeTest = function(option, table) {
     };
 
     var _setHeader = function(json, headers) {
-      var headers = header || {};
+      var headers = headers || {};
       if (json && json.length > 0) {
         headers['Content-Type']   = 'application/json';
         headers['Content-Length'] = Buffer.byteLength(json);
@@ -68,8 +71,8 @@ var executeTest = function(option, table) {
       return headers;
     };
 
-    var json = this._getJson(object);
-    option.headers = this._setHeader(json, option.headers);
+    var json = _toJson(object);
+    option.headers = _setHeader(json, option.headers);
 
     var req = http.request(option, function(res) {
       var output = '';
@@ -96,7 +99,10 @@ var executeTest = function(option, table) {
   var fnTestGet = function(fn) {
     option.method = 'GET';
     var _cb = function(err, result) {
-      var data = result.data;
+      var data;
+      if (result && result.data) {
+        data = result.data;
+      }
       if (data) {
         if (ai) {
           for (var i = 0; i < data.length; i++) {
@@ -169,7 +175,6 @@ var executeTest = function(option, table) {
     function(err, result) {
       if (err) {
         console.log(err);
-        throw err;
       }
       console.log('   \033[36mmapping\033[0m : complete');
     }
