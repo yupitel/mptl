@@ -1,4 +1,4 @@
-var Config = require('./config'),
+var Config = require('./testconfig'),
     async  = require('async'),
     http   = require('http');
 
@@ -14,9 +14,6 @@ var test;
   test = tests.<%= tables[i].name %>;
   test.entity = require('../dao/<%= tables[i].name %>');
   test.path   = Config.header + '<%= tables[i].name %>';
-  test.ex     = [];  // table: id array
-  test.istest = false;
-  test.ids    = [];
 
 <% } -%>
 
@@ -44,10 +41,31 @@ var executeTest = function(option, table) {
   // test : get && post -> get && put -> get && delete -> get
   // check each api and changed data is recovered to default 
   var entity = table.entity;
-  var ai;
-  if ('function' === typeof entity.getAI) {
-    ai = entity.getAI();
+  var ai  = entity.getAI();
+  var pri = entity.getPrimaryKey();
+  var delcheck = false;
+
+  if (pri) {
+    var priAry = [];
+    for (var prikey in pri) {
+      priAry.push(prikey);
+    }
+    if (priAry.length > 0) {
+      if (!ai) {
+        delcheck = true;
+      } else {
+        if (priAry.length > 1) {
+          delcheck = true;
+        } else {
+          if (ai !== priAry[0]) {
+            delcheck = true;
+          }
+        }
+      }
+    }
   }
+  
+
   var fnRequest = function(option, object, cb) {
 
     var _toJson = function(object) {
@@ -103,69 +121,66 @@ var executeTest = function(option, table) {
       if (result && result.data) {
         data = result.data;
       }
-      if (data) {
-        if (ai) {
-          for (var i = 0; i < data.length; i++) {
-            data[i][ai] = null;
+      var _cbnext = function(err, result) {
+        if (data) {
+          if (ai) {
+            for (var i = 0; i < data.length; i++) {
+              data[i][ai] = null;
+            }
           }
         }
+        if (fn) {fn(err, data);}
       }
-      if (fn) {fn(err, data);}
+
+      if (delcheck === true) {
+        option.method = 'DELETE';
+        var _cb = function(err, result) {
+          if (fn) {fn(err);}
+        };
+        var object = {record: data};
+        fnRequest(option, object, _cbnext);
+      } else {
+        _cbnext(err, result);
+      }
     };
     var object = {limit: 10};
     fnRequest(option, object, _cb);
   };
     
   var fnTestPost = function(record, fn) {
-    var setdata;
     option.method = 'POST';
-    var _cbnext = function(err, result) {
-      var data = result.data;
-      if (fn) {fn(err, setdata);}
-    };
-
     var _cb = function(err, result) {
-      var data = result.data;
-      setdata = data;
-      var object  = {record: record};
-      fnRequest(option, object, _cbnext);
+      var data;
+      if (result && result.data) {
+        data = result.data;
+      }
+      if (fn) {fn(err, data);}
     };
+    if (fn) {fn(null, record);}
     var object = {record: record};
     fnRequest(option, object, _cb);
   };
 
   var fnTestPut = function(record, fn) {
-    var setdata;
     option.method = 'PUT';
-    var _cbnext = function(err, result) {
-      var data = result.data;
-      if (fn) {fn(err, setdata);}
-    };
-
     var _cb = function(err, result) {
-      var data = result.data;
-      setdata = data;
-      var object  = {record: record};
-      fnRequest(option, object, _cbnext);
+      var data;
+      if (result && result.data) {
+        data = result.data;
+      }
+      if (fn) {fn(err, record);}
     };
+    if (fn) {fn(null, record);}
     var object = {record: record};
     fnRequest(option, object, _cb);
   }; 
 
   var fnTestDelete = function(record, fn) {
     option.method = 'DELETE';
-    var setdata;
-    var _cbnext = function(err, result) {
-      var data = result.data;
-      if (fn) {fn(err, setdata);}
-    };
-
     var _cb = function(err, result) {
-      var data = result.data;
-      setdata = data;
-      var object  = {record: record};
-      fnRequest(option, object, _cbnext);
+      if (fn) {fn(err);}
     };
+    if (fn) {fn(null, record);}
     var object = {record: record};
     fnRequest(option, object, _cb);
   };
@@ -175,6 +190,7 @@ var executeTest = function(option, table) {
     function(err, result) {
       if (err) {
         console.log(err);
+        throw err;
       }
       console.log('   \033[36mmapping\033[0m : complete');
     }
@@ -184,40 +200,10 @@ var executeTest = function(option, table) {
 };
 
 
-var testcnt = 0;
-var testnum = 0;
 for (var key in tests) {
-  testnum ++;
-}
-
-var isContinue = true
-  while(isContinue === true) {
-  for (var key in tests) {
-    var i;
-    var table = tests[key];
-    var isExKey = true;
-    if (table.ex && table.ex.length > 0) {
-      for (i = 0; i < table.ex.length; i++) {
-        var exkey = table.ex[i];
-        if (!exkey.ids) {
-          if (tests[exkey.table].ids.length > 0) {
-            exkey.ids = tests[exkey.table].ids;
-          } else {
-            isExKey = false;
-          }
-        }
-      }
-    }
-    if (isExKey === true && table.istest === false) {
-      var op = cloneObject(options);
-      op.path = table.path;
-      executeTest(op, table);
-      table.istest = true;
-      testcnt ++;
-      if (testnum === testcnt) {
-        isContinue = false;
-      }
-    }
-  }
+  var table = tests[key];
+  var op = cloneObject(options);
+  op.path = table.path;
+  executeTest(op, table);
 }
 

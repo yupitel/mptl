@@ -7,15 +7,8 @@ var <%= classname %> = {
     data = data || {};
     var entity = {
       <% for (var i = 0; i < columns.length; i++) { -%>
-      <%= columns[i].field %><%= columns[i].space %>: undefined,
+      <%= columns[i].field %><%= columns[i].space %>: undefined<% if (columns.length > 1 && i < (columns.length - 1)) { %>,<% } %>
       <% } -%>
-      getAI: function() {
-        <%if (ai) { -%>
-        return '<%= ai.field %>';
-        <% } else { -%>
-        return undefined;
-        <% } -%>
-      }
     };
 
     if (data) {
@@ -58,10 +51,17 @@ var <%= classname %> = {
     }
     var table = {
       <% for (var i = 0; i < columns.length; i++) { -%>
-      <%= columns[i].field %><%= columns[i].space %>: true<% if (i < (columns.length - 1)) { %>,<% } %>
+      <%= columns[i].field %><%= columns[i].space %>: true<% if (columns.length > 1 && i < (columns.length - 1)) { %>,<% } %>
       <% } -%>
     };
     return table[field];
+  },
+  getAI: function() {
+    <%if (ai) { -%>
+    return '<%= ai.field %>';
+    <% } else { -%>
+    return undefined;
+    <% } -%>
   },
   getKeys: function() {
     return {
@@ -70,17 +70,25 @@ var <%= classname %> = {
       <% } -%>
     };
   },
-  getTableName: function() {
-    return '<%= table %>';
-  },
   getPrimaryKey: function() {
     return {
+      <% var keynum = 0; -%>
+      <% var keycnt = 0; -%>
       <% for (var i = 0; i < keys.length; i++) { -%>
       <% if (keys[i].key == 'PRI') { -%>
-      <%= keys[i].field %> : '<%= keys[i].key %>'<% if (keys.length > 1 && i < (keys.length - 1)) { %>,<% } %>
+      <% keynum ++; -%>
+      <% } -%>
+      <% } -%>
+      <% for (var i = 0; i < keys.length; i++) { -%>
+      <% if (keys[i].key == 'PRI') { -%>
+      <%= keys[i].field %> : '<%= keys[i].key %>'<% if (keycnt < (keynum - 1)) { %>,<% } %>
+      <% keycnt ++; -%>
       <% } -%>
       <% } -%>
     };
+  },
+  getTableName: function() {
+    return '<%= table %>';
   },
   getType: function(field) {
     if (!field) {
@@ -88,7 +96,7 @@ var <%= classname %> = {
     }
     var type = {
       <% for (var i = 0; i < columns.length; i++) { -%>
-      <%= columns[i].field %><%= columns[i].space %>: '<%= columns[i].type %>'<% if (i < (columns.length - 1)) { %>,<% } %>
+      <%= columns[i].field %><%= columns[i].space %>: '<%= columns[i].type %>'<% if (columns.length > 1 && i < (columns.length - 1)) { %>,<% } %>
       <% } -%>
     };
     return type[field];
@@ -99,7 +107,7 @@ var <%= classname %> = {
     }
     var type = {
       <% for (var i = 0; i < columns.length; i++) { -%>
-      <%= columns[i].field %><%= columns[i].space %>: <%= columns[i].defEscape %><%= columns[i].def %><%= columns[i].defEscape %><% if (i < (columns.length - 1)) { %>,<% } %>
+      <%= columns[i].field %><%= columns[i].space %>: <%= columns[i].defEscape %><%= columns[i].def %><%= columns[i].defEscape %><% if (columns.length > 1 && i < (columns.length - 1)) { %>,<% } %>
       <% } -%>
     };
     return type[field];
@@ -116,7 +124,7 @@ var <%= classname %> = {
       <% } -%>
       <% } -%>
       <% for (i = 0; i < use.length; i++) { -%>
-      <%= use[i].field %>: true<% if (i < (use.length - 1)) { %>,<% } %>
+      <%= use[i].field %>: true<% if (use.length > 1 && i < (use.length - 1)) { %>,<% } %>
       <% } -%>
     };
     return escape[field];

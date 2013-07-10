@@ -21,7 +21,7 @@ var <%= classname -%>Mapper = {
       if (options.isConnect) {isConnect = options.isConnect;}
     }
   
-    whsql = Util.createQuery(Class, records, que, true);
+    whsql = Util.createQuery(Class, records, que, true, true);
     if (whsql) {
       sql += ' WHERE ' + whsql;
     }
@@ -90,7 +90,7 @@ var <%= classname -%>Mapper = {
       }
     }
   
-    whsql = Util.createQuery(Class, records, que, true);
+    whsql = Util.createQuery(Class, records, que, true, true);
     if (whsql) {
       sql += ' WHERE ' + whsql;
     }
@@ -125,7 +125,7 @@ var <%= classname -%>Mapper = {
         <% if (sql.transaction) { -%>
         conn.beginTransaction(cb);
         <% } -%>
-        conn.query(sql, cb);
+        conn.query(sql, args, cb);
       } catch (err) {
         if (isConnect === false && conn) {
           conn.end();
@@ -208,7 +208,7 @@ var <%= classname -%>Mapper = {
           }
           if (args && args.index !== null && args.index !== undefined) {
             var record = records[args.index];
-            var aikey = record.getAI();
+            var aikey = Class.getAI();
             if (aikey) {
               record[aikey] = rows.insertId;
             }
