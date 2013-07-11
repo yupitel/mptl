@@ -12,7 +12,7 @@ var options = {
 
 var tests = {};
 var test;
-var pathheader = Config.header || '';
+var pathheader = Config.header || '/';
 <% for (var i = 0; i < tables.length; i++) { -%>
   tests.<%= tables[i].name %> = {};
   test = tests.<%= tables[i].name %>;
@@ -47,10 +47,10 @@ var executeTest = function(option, table) {
   var entity = table.entity;
   var ai  = entity.getAI();
   var pri = entity.getPrimaryKey();
+  var priAry = [];
   var delcheck = false;
 
   if (pri) {
-    var priAry = [];
     for (var prikey in pri) {
       priAry.push(prikey);
     }
@@ -98,7 +98,7 @@ var executeTest = function(option, table) {
 
     var req = http.request(option, function(res) {
       var output = '';
-      console.log(options.host + ':' + res.statusCode);
+      console.log(option.path + ' : ' + option.method + ' : '+ res.statusCode);
       
       res.setEncoding('utf8');
       res.on('data', function (chunk) {
@@ -121,9 +121,18 @@ var executeTest = function(option, table) {
   var fnTestGet = function(fn) {
     option.method = 'GET';
     var _cb = function(err, result) {
+      if (err) {
+        if (fn) {fn(err);}
+        return;
+      }
       var data;
       if (result && result.data) {
         data = result.data;
+      } else {
+        err = new Error('no data');
+        err.type = 1;
+        if (fn) {fn(err);}
+        return;
       }
       var _cbnext = function(err, result) {
         if (data) {
@@ -151,7 +160,7 @@ var executeTest = function(option, table) {
     fnRequest(option, object, _cb);
   };
     
-  var fnTestPost = function(record, fn) {
+  var fnTestPost = function(records, fn) {
     option.method = 'POST';
     var _cb = function(err, result) {
       var data;
@@ -160,32 +169,45 @@ var executeTest = function(option, table) {
       }
       if (fn) {fn(err, data);}
     };
-    if (fn) {fn(null, record);}
-    var object = {record: record};
+    var object = {record: records};
     fnRequest(option, object, _cb);
   };
 
-  var fnTestPut = function(record, fn) {
+  var fnTestPut = function(records, fn) {
     option.method = 'PUT';
     var _cb = function(err, result) {
       var data;
       if (result && result.data) {
         data = result.data;
       }
-      if (fn) {fn(err, record);}
+      if (fn) {fn(err, records);}
     };
-    if (fn) {fn(null, record);}
-    var object = {record: record};
+    var object = {record: records};
     fnRequest(option, object, _cb);
   }; 
 
-  var fnTestDelete = function(record, fn) {
+  var fnTestDelete = function(records, fn) {
     option.method = 'DELETE';
     var _cb = function(err, result) {
       if (fn) {fn(err);}
     };
-    if (fn) {fn(null, record);}
-    var object = {record: record};
+    // set null to each external key
+    for (var i = 0; i < records.length; i++) {
+      var record = records[i];
+      for (var key in pri) {
+        if (record[key]) {
+          pri[key] = record[key];
+        } else {
+          pri[key] = undefined;
+        }
+      }
+      entity.setUndefined(record);
+      for (var key in pri) {
+        record[key] = pri[key];
+      } 
+    }
+
+    var object = {record: records};
     fnRequest(option, object, _cb);
   };
 
@@ -194,12 +216,13 @@ var executeTest = function(option, table) {
     function(err, result) {
       if (err) {
         console.log(err);
-        throw err;
+        if (err.type && err.type !== 1) {
+          throw err;
+        }
       }
       console.log('   \033[36mmapping\033[0m : complete');
     }
   );
-
 
 };
 
