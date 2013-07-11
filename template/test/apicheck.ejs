@@ -1,19 +1,23 @@
-var Config = require('./testconfig'),
+var Config = require('./config'),
     async  = require('async'),
     http   = require('http');
 
+var hostname = Config.hostname || 'localhost';
+var port     = Config.port || 3000;
+
 var options = {
-  hostname: Config.hostname,
-  port: Config.port
+  hostname: hostname,
+  port: port
 };
 
 var tests = {};
 var test;
+var pathheader = Config.header || '';
 <% for (var i = 0; i < tables.length; i++) { -%>
   tests.<%= tables[i].name %> = {};
   test = tests.<%= tables[i].name %>;
   test.entity = require('../dao/<%= tables[i].name %>');
-  test.path   = Config.header + '<%= tables[i].name %>';
+  test.path   = pathheader + '<%= tables[i].name %>';
 
 <% } -%>
 
