@@ -42,8 +42,8 @@ var cloneObject = function(input) {
 
 
 var executeTest = function(option, table) {
-  // test : get && post -> get && put -> get && delete -> get
-  // check each api and changed data is recovered to default 
+  // test : get -> post -> put -> delete
+  // check each api
   var entity = table.entity;
   var ai  = entity.getAI();
   var pri = entity.getPrimaryKey();
