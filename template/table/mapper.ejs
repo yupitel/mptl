@@ -1,17 +1,16 @@
 /*
  * Mapper for <%= table %>
- *                   powered by MapperTemplate.
  */
 
-var Class = require('./<%= classname %>');
-var Util  = require('../lib/queryutil');
-
+var Class   = require('./<%= classname %>');
+var Util    = require('../lib/queryutil');
+var ObjUtil = require('../lib/objectutil');
 
 var <%= classname -%>Mapper = {
 
   <% if (sql.select) { -%>
   count: function(conn, records, options, fn) {
-    records = Util.convertToArray(records);
+    records = ObjUtil.toArray(records);
     var sql   = 'SELECT COUNT(*) AS num FROM <%= table %>';
     var whsql = '';
     var que;
@@ -61,7 +60,7 @@ var <%= classname -%>Mapper = {
   <% } -%>
   <% if (sql.select) { -%>
   select: function(conn, records, options, fn) {
-    records = Util.convertToArray(records);
+    records = ObjUtil.toArray(records);
     <% if (!sql.custom.select) { -%>
     var sql   = 'SELECT * FROM <%= table %>';
     <% } else { -%>
@@ -149,6 +148,7 @@ var <%= classname -%>Mapper = {
   
   <% if (sql.insert) { -%>
   insert: function(conn, records, options, fn) {
+    records = ObjUtil.toArray(records);
     if (!records || records.length === 0) {
       if (fn) {return fn(new Error('records is null'));}
     }
@@ -156,7 +156,6 @@ var <%= classname -%>Mapper = {
     if (options) {
       if (options.isConnect) {isConnect = options.isConnect;}
     }
-    records = Util.convertToArray(records);
     <% if (!sql.custom.insert) { -%>
     var sql    = 'INSERT INTO <%= table %> SET ?';
     <% } else { -%>
@@ -290,7 +289,7 @@ var <%= classname -%>Mapper = {
     if (options) {
       if (options.isConnect) {isConnect = options.isConnect;}
     }
-    records = Util.convertToArray(records);
+    records = ObjUtil.toArray(records);
     <% if (!sql.custom.select) { -%>
     var sql = 'UPDATE <%= table %> SET ?';
     <% } else { -%>
@@ -406,7 +405,7 @@ var <%= classname -%>Mapper = {
   
   <% if (sql.delete) { -%>
   delete: function(conn, records, options, fn) {
-    records = Util.convertToArray(records);
+    records = ObjUtil.toArray(records);
     var sql = 'DELETE FROM <%= table %>';
     var whsql = '';
     var que;
@@ -419,7 +418,7 @@ var <%= classname -%>Mapper = {
     // prohibit to delete all column.
     // if delete all column, set '1' to que variable.
     if (!whsql || whsql.length === 0) {
-      cb();
+      fn();
       return;
     } else {
       sql += ' WHERE ' + whsql;

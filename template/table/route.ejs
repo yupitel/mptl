@@ -1,109 +1,75 @@
-var Class     = require('../../dao/<%= classname %>'),
-    Mapper    = require('../../dao/<%= classname %>Mapper'),
-    Util      = require('../../lib/queryutil'),
-    RouteUtil = require('../../lib/routeutil');
+var async     = require('async')
+  , Entity    = require('../../dao/<%= classname %>')
+  , Mapper    = require('../../dao/<%= classname %>Mapper')
+  , ErrorCode = require('../../lib/errorcode')
+  , Request   = require('../../lib/requestquery');
 
 function getQuery(params) {
   var queparams = RouteUtil.getQueryParams(Class, params);
   return Util.createQueryWithParams(Class, queparams);
 }
 
-function execute(req, res, method, view) {
+function execute(req, res, next, method, view) {
   var dbconn = req.dbconn;
+  if (!dbconn) {
+    return next(new Error('no db connection'));
+  }
 
-  var format = req.params.format;
-  var cb = function(err, records) {
-    res.json({result: 'SUCCESS', data: records});
+  var KeyTable = null;
+
+  var fnParams = function(cb) {
+    var params = {limit: 20};
+    var reqparams = Request.getParameter(req, Entity.parse);
+    if (reqparams) {
+      Request.setParameter(reqparams, params, method);
+    }
+    cb(null, params);
   };
 
-  if (dbconn) {
-    // get param pair
-    var params  = RouteUtil.getParams(req);
-    var records = RouteUtil.getRecord(req);
-    var orders  = RouteUtil.getOrder(req);
-    var query   = getQuery(params);
-    var options = {};
-    var userecords = [];
-    var useorders  = [];
-
-    if (records) {
-      for (var i = 0; i < records.length; i++) {
-        // check existence of field
-        var isExist = false;
-        for (var field in records[i]) {
-          isExist = Class.isExist(field);
-          if (isExist) {
-            break;
-          }
-        }
-        if (isExist) {
-          userecords.push(Class.create(records[i]));
+  var fnRepParams = function(params, cb) {
+    if (!KeyTable) {
+      return cb(null, params);
+    }
+    var _params = {};
+    for (var ele in params) {
+      if (params.hasOwnProperty(ele)) {
+        if (KeyTable[ele]) {
+          _params[KeyTable[ele]] = params[ele];
+        } else {
+          _params[ele] = params[ele];
         }
       }
     }
+    return cb(null, _params);
+  };
 
-    if (orders) {
-      for (var i = 0; i < orders.length; i++) {
-        // check existence of field
-        var isExist = false;
-        var order = orders[i];
-        if (!order.key) {
-          continue;
-        }
-        isExist = Class.isExist(order.key);
-        if (isExist) {
-          useorders.push(order);
-        }
+  var fnRequest = function(params, cb) {
+    Request.request(dbconn, Entity, Mapper, params, method, view, cb);
+  };
+
+  async.waterfall([fnParams, fnRepParams, fnRequest], function(err, records) {
+    if (err) {
+      console.log(err);
+      var errcode = err.code;
+      if (!ErrorCode[errcode] || ErrorCode[errcode] !== true) {
+        return next(err);
       }
     }
-
-
-    options.que = query;
-    if (method === 'select') {
-      if (params.limit) {
-        options.limit = params.limit;
-        if (params.offset) {
-          options.offset = params.offset;
-        }
-      }
-      if (useorders && useorders.length > 0) {
-        options.orders = useorders;
-      }
-    }
-    try {
-      if (Mapper[method]) {
-        Mapper[method](dbconn, userecords, options, cb);
-      } else {
-        cb();
-      }
-    } catch(err) {
-      res.json({result: 'FAIL'});
-    }
-  } else {
-    res.json({result: 'FAIL', error: 'no db connection'});
-  }
+    res.jsonp({result: 'SUCCESS', data: records});
+  });
 }
 
 module.exports = {
-  index: function(req, res){
-    execute(req, res, 'select', 'show');
+  index: function(req, res, next){
+    execute(req, res, next, 'select', 'show');
   },
-  new: function(req, res){
-    execute(req, res, 'insert', 'new');
+  create: function(req, res, next){
+    execute(req, res, next, 'insert', 'create');
   },  
-  create: function(req, res){
-    execute(req, res, 'insert', 'create');
+  show: function(req, res, next){
+    execute(req, res, next, 'select', 'show');
   },  
-  show: function(req, res){
-    execute(req, res, 'select', 'show');
-  },  
-  edit: function(req, res){
-    execute(req, res, 'select', 'edit');
-  },  
-  update: function(req, res){
-    execute(req, res, 'update', 'update');
-  },  
-  destroy: function(req, res){
-    execute(req, res, 'delete', 'destroy');
-  }
+  update: function(req, res, next){
+    execute(req, res, next, 'update', 'update');
+  } 
 };

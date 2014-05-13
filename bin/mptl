@@ -11,9 +11,11 @@
  */
 
 var esfs       = require('esfs'),
+    fs         = require('fs'),
     program    = require('commander'),
     pkg        = require('../package.json'),
     version    = pkg.version,
+    path       = require('path'),
     async      = require('async'),
     properties = require('properties'),
     mptl       = require('../lib/mptl');
@@ -78,28 +80,26 @@ function mkdir(path) {
  * 
  */
 function loadConfig(file, filetable, conf, tplpath, fn) {
-  properties.load (file, conf, function (error, props){
-    var rprops = readNamespace(props);
-    if (!rprops.dir) {
-      rprops.dir = {};
-    }
-    if (tplpath) {
-      rprops.tplDir = tplpath;
-    }
+  console.log();
+  var config = require(file);
+  if (!config.dir) {
+    config.dir = {};
+  }
+  if (tplpath) {
+    config.tplDir = tplpath;
+  }
 
-    if (filetable) {
-      properties.load (filetable, conf, function (error, tableprops){
-        var rtableprops = readNamespace(tableprops);
-        if (fn) {
-          fn(rprops, rtableprops);
-        }
-      });
-    } else {
-      if (fn) {
-        fn(rprops, null);
-      }
+  if (filetable) {
+    var tblconfig;
+    tblconfig = require(filetable);
+    if (fn) {
+      fn(config, tblconfig);
     }
-  });
+  } else {
+    if (fn) {
+      fn(config, null);
+    }
+  }
 }
 
 /**
@@ -128,6 +128,9 @@ var tableconfig = program.tableconfig || null;
   if (tableconfig) {
     console.log('   \033[36mconfig file for table\033[0m : ' + tableconfig);
   }
+  config = path.resolve(config);
+  tableconfig = path.resolve(tableconfig);
+
 
   loadConfig(config, tableconfig, prop_config, tplpath, createMapper);
 })(config);

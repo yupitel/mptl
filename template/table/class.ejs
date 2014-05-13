@@ -12,7 +12,7 @@ var <%= classname %> = {
     };
 
     if (data) {
-      for (field in entity) {
+      for (var field in entity) {
         if (typeof data[field] === 'function') {
           continue;
         }
@@ -128,6 +128,37 @@ var <%= classname %> = {
       <% } -%>
     };
     return escape[field];
+  },
+  parse: function(data, datatype) {
+    if (!data || typeof(data) !== 'object') {
+      return data;
+    }
+    var type;
+    for (var field in data) {
+      if (typeof data[field] === 'function') {
+        continue;
+      }
+      if (typeof data[field] !== 'undefined') {
+        type = null;
+        if (datatype && datatype[field]) {
+          type = datatype[field];
+        }
+        data[field] = <%= classname %>.parseField(field, data[field], type);
+      }
+    }
+    return data;
+  },
+  parseField: function(key, value, type) {
+    type = type || <%= classname %>.getType(key);
+    if (!type || typeof(data) === 'object') {
+      return value;
+    }
+    if (type.indexOf('int') >= 0) {
+      value = parseInt(value);
+    } else if (type.indexOf('float') >= 0 || type.indexOf('double') >= 0) {
+      value = parseFloat(value);
+    }
+    return value;
   }
 };
 
